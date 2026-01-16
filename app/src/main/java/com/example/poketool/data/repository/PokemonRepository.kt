@@ -66,4 +66,40 @@ class PokemonRepository(
             Result.failure(e)
         }
     }
+
+    suspend fun fetchPokemonFullDetails(pokemonId: Int): Result<Pokemon> {
+        return try {
+            val cached = pokemonDao.getPokemonById(pokemonId)
+            if (cached?.stats != null) {
+                return Result.success(cached.toDomain())
+            }
+
+            val response = pokeApiService.getPokemonDetail(pokemonId)
+            val types = response.types
+                .sortedBy { it.slot }
+                .joinToString(",") { it.type.name.replaceFirstChar { c -> c.uppercase() } }
+            val imageUrl = response.sprites.frontDefault
+                ?: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$pokemonId.png"
+            val stats = response.stats
+                .joinToString(";") { "${it.stat.name}:${it.baseStat}" }
+            val abilities = response.abilities
+                .sortedBy { it.slot }
+                .joinToString(",") { it.ability.name.replaceFirstChar { c -> c.uppercase() }.replace("-", " ") }
+
+            pokemonDao.updateFullDetails(
+                id = pokemonId,
+                types = types,
+                imageUrl = imageUrl,
+                height = response.height,
+                weight = response.weight,
+                stats = stats,
+                abilities = abilities
+            )
+
+            val updated = pokemonDao.getPokemonById(pokemonId)
+            Result.success(updated?.toDomain() ?: throw Exception("Pokemon not found"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

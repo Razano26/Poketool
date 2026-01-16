@@ -31,6 +31,17 @@ interface PokemonDao {
     @Query("UPDATE pokemon SET types = :types, imageUrl = :imageUrl WHERE id = :id")
     suspend fun updateDetails(id: Int, types: String, imageUrl: String)
 
+    @Query("UPDATE pokemon SET types = :types, imageUrl = :imageUrl, height = :height, weight = :weight, stats = :stats, abilities = :abilities WHERE id = :id")
+    suspend fun updateFullDetails(
+        id: Int,
+        types: String,
+        imageUrl: String,
+        height: Int,
+        weight: Int,
+        stats: String,
+        abilities: String
+    )
+
     @Query("DELETE FROM pokemon")
     suspend fun deleteAll()
 }
