@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,7 +34,8 @@ import com.example.poketool.ui.theme.PoketoolTheme
 @Composable
 fun PokemonItem(
     pokemon: Pokemon,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoadingDetails: Boolean = false
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -46,7 +49,7 @@ fun PokemonItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             AsyncImage(
-                model = pokemon.imageUrl,
+                model = pokemon.displayImageUrl,
                 contentDescription = pokemon.name,
                 modifier = Modifier.size(64.dp)
             )
@@ -71,8 +74,12 @@ fun PokemonItem(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    pokemon.types.forEach { type ->
-                        TypeChip(type = type)
+                    if (isLoadingDetails || !pokemon.hasDetails) {
+                        LoadingTypeChip()
+                    } else {
+                        pokemon.types.forEach { type ->
+                            TypeChip(type = type)
+                        }
                     }
                 }
             }
@@ -95,6 +102,17 @@ private fun TypeChip(type: String) {
             fontWeight = FontWeight.Medium
         )
     }
+}
+
+@Composable
+private fun LoadingTypeChip() {
+    Box(
+        modifier = Modifier
+            .width(60.dp)
+            .height(22.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    )
 }
 
 private fun getTypeColor(type: String): Color {
@@ -132,6 +150,22 @@ private fun PokemonItemPreview() {
                 types = listOf("Grass", "Poison")
             ),
             modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PokemonItemLoadingPreview() {
+    PoketoolTheme {
+        PokemonItem(
+            pokemon = Pokemon(
+                id = 25,
+                name = "Pikachu",
+                types = emptyList()
+            ),
+            modifier = Modifier.padding(16.dp),
+            isLoadingDetails = true
         )
     }
 }
