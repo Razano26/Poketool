@@ -2,7 +2,10 @@ package com.example.poketool.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -245,21 +248,20 @@ private fun PokemonSlot(
                             modifier = Modifier.size(64.dp)
                         )
                         if (onRemove != null) {
-                            IconButton(
-                                onClick = onRemove,
+                            Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .size(24.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.error,
-                                        CircleShape
-                                    )
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error)
+                                    .clickable(onClick = onRemove),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Remove",
                                     tint = MaterialTheme.colorScheme.onError,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         }
@@ -401,13 +403,15 @@ private fun TypeCoverageSection(coverage: TypeCoverage) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TypeChipsRow(types: List<String>) {
-    Row(
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        types.take(8).forEach { type ->
+        types.forEach { type ->
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
@@ -421,13 +425,6 @@ private fun TypeChipsRow(types: List<String>) {
                     fontWeight = FontWeight.Medium
                 )
             }
-        }
-        if (types.size > 8) {
-            Text(
-                text = "+${types.size - 8}",
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
