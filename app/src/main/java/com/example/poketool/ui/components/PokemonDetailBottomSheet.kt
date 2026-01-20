@@ -14,14 +14,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.poketool.data.model.Pokemon
 import com.example.poketool.data.model.PokemonStatInfo
+import com.example.poketool.data.model.Team
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -39,6 +53,9 @@ fun PokemonDetailBottomSheet(
     pokemon: Pokemon,
     isLoading: Boolean,
     sheetState: SheetState,
+    teams: List<Team> = emptyList(),
+    selectedTeamId: Long? = null,
+    onAddToTeam: (Long) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -138,6 +155,133 @@ fun PokemonDetailBottomSheet(
                     }
                 }
             }
+
+            if (teams.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                AddToTeamSection(
+                    pokemon = pokemon,
+                    teams = teams,
+                    selectedTeamId = selectedTeamId,
+                    onAddToTeam = onAddToTeam
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddToTeamSection(
+    pokemon: Pokemon,
+    teams: List<Team>,
+    selectedTeamId: Long?,
+    onAddToTeam: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedTeam = teams.find { it.id == selectedTeamId }
+    val isInSelectedTeam = selectedTeam?.contains(pokemon.id) == true
+    val isTeamFull = selectedTeam?.isFull == true
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Add to Team",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = selectedTeam?.name ?: "Select a team",
+                        maxLines = 1
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    teams.forEach { team ->
+                        val alreadyInTeam = team.contains(pokemon.id)
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(team.name)
+                                    Text(
+                                        text = "(${team.size}/6)",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (alreadyInTeam) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Already in team",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                expanded = false
+                                if (!alreadyInTeam && !team.isFull) {
+                                    onAddToTeam(team.id)
+                                }
+                            },
+                            enabled = !alreadyInTeam && !team.isFull
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = {
+                    selectedTeamId?.let { onAddToTeam(it) }
+                },
+                enabled = selectedTeamId != null && !isInSelectedTeam && !isTeamFull,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isInSelectedTeam)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(
+                    imageVector = if (isInSelectedTeam) Icons.Default.Check else Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = when {
+                        isInSelectedTeam -> "Added"
+                        isTeamFull -> "Full"
+                        else -> "Add"
+                    }
+                )
+            }
+        }
+
+        if (selectedTeamId != null && isTeamFull && !isInSelectedTeam) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "This team is full (6/6)",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

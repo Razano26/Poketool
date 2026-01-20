@@ -27,17 +27,24 @@ import com.example.poketool.ui.components.PokemonDetailBottomSheet
 import com.example.poketool.ui.components.PokemonItem
 import com.example.poketool.ui.components.PokemonSearchBar
 import com.example.poketool.ui.viewmodel.PokedexViewModel
+import com.example.poketool.ui.viewmodel.TeamViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PokedexScreen(viewModel: PokedexViewModel) {
+fun PokedexScreen(
+    viewModel: PokedexViewModel,
+    teamViewModel: TeamViewModel
+) {
     val pokemonList by viewModel.pokemonList.collectAsState()
     val loadingDetails by viewModel.loadingDetails.collectAsState()
     val selectedPokemon by viewModel.selectedPokemon.collectAsState()
     val loadingFullDetails by viewModel.loadingFullDetails.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchMode by viewModel.searchMode.collectAsState()
+
+    val allTeams by teamViewModel.allTeams.collectAsState()
+    val selectedTeamId by teamViewModel.selectedTeamId.collectAsState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -91,6 +98,12 @@ fun PokedexScreen(viewModel: PokedexViewModel) {
             pokemon = pokemon,
             isLoading = loadingFullDetails,
             sheetState = sheetState,
+            teams = allTeams,
+            selectedTeamId = selectedTeamId,
+            onAddToTeam = { teamId ->
+                teamViewModel.selectTeam(teamId)
+                teamViewModel.addPokemonToTeam(pokemon.id)
+            },
             onDismiss = {
                 scope.launch {
                     sheetState.hide()

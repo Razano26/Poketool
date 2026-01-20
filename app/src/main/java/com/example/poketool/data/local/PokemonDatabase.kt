@@ -5,10 +5,15 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [PokemonEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [PokemonEntity::class, TeamEntity::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class PokemonDatabase : RoomDatabase() {
 
     abstract fun pokemonDao(): PokemonDao
+    abstract fun teamDao(): TeamDao
 
     companion object {
         @Volatile
@@ -20,7 +25,9 @@ abstract class PokemonDatabase : RoomDatabase() {
                     context.applicationContext,
                     PokemonDatabase::class.java,
                     "pokemon_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

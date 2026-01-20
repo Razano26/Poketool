@@ -20,21 +20,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.poketool.data.local.PokemonDatabase
 import com.example.poketool.data.remote.RetrofitClient
 import com.example.poketool.data.repository.PokemonRepository
+import com.example.poketool.data.repository.TeamRepository
 import com.example.poketool.navigation.BottomNavItem
 import com.example.poketool.ui.screens.CollectionScreen
 import com.example.poketool.ui.screens.PokedexScreen
 import com.example.poketool.ui.screens.SyncScreen
+import com.example.poketool.ui.screens.TeamDetailScreen
 import com.example.poketool.ui.screens.TeamScreen
 import com.example.poketool.ui.theme.PoketoolTheme
 import com.example.poketool.ui.viewmodel.PokedexViewModel
 import com.example.poketool.ui.viewmodel.SyncViewModel
+import com.example.poketool.ui.viewmodel.TeamViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,16 +57,23 @@ class MainActivity : ComponentActivity() {
 fun PoketoolApp() {
     val context = LocalContext.current
     val database = PokemonDatabase.getDatabase(context)
-    val repository = PokemonRepository(
+    val pokemonRepository = PokemonRepository(
         pokemonDao = database.pokemonDao(),
         pokeApiService = RetrofitClient.pokeApiService
     )
+    val teamRepository = TeamRepository(
+        teamDao = database.teamDao(),
+        pokemonDao = database.pokemonDao()
+    )
 
     val syncViewModel: SyncViewModel = viewModel(
-        factory = SyncViewModel.Factory(repository)
+        factory = SyncViewModel.Factory(pokemonRepository)
     )
     val pokedexViewModel: PokedexViewModel = viewModel(
-        factory = PokedexViewModel.Factory(repository)
+        factory = PokedexViewModel.Factory(pokemonRepository)
+    )
+    val teamViewModel: TeamViewModel = viewModel(
+        factory = TeamViewModel.Factory(teamRepository, pokemonRepository)
     )
 
     val needsSync by syncViewModel.needsSync.collectAsState()
@@ -88,7 +100,7 @@ fun PoketoolApp() {
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute != "sync"
+    val showBottomBar = currentRoute != "sync" && currentRoute?.startsWith("team/") != true
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -133,9 +145,30 @@ fun PoketoolApp() {
                 )
             }
             composable(BottomNavItem.Pokedex.route) {
-                PokedexScreen(viewModel = pokedexViewModel)
+                PokedexScreen(
+                    viewModel = pokedexViewModel,
+                    teamViewModel = teamViewModel
+                )
             }
-            composable(BottomNavItem.Team.route) { TeamScreen() }
+            composable(BottomNavItem.Team.route) {
+                TeamScreen(
+                    viewModel = teamViewModel,
+                    onNavigateToDetail = { teamId ->
+                        navController.navigate("team/$teamId")
+                    }
+                )
+            }
+            composable(
+                route = "team/{teamId}",
+                arguments = listOf(navArgument("teamId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val teamId = backStackEntry.arguments?.getLong("teamId") ?: return@composable
+                TeamDetailScreen(
+                    teamId = teamId,
+                    viewModel = teamViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
             composable(BottomNavItem.Collection.route) { CollectionScreen() }
         }
     }
