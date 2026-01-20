@@ -1,5 +1,6 @@
 package com.example.poketool.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +69,7 @@ fun TeamDetailScreen(
     viewModel: TeamViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val selectedTeam by viewModel.selectedTeam.collectAsState()
     val isEditingName by viewModel.isEditingName.collectAsState()
 
@@ -87,6 +91,23 @@ fun TeamDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            team?.let { t ->
+                                val shareText = formatTeamForSharing(t)
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, "Share Team")
+                                context.startActivity(shareIntent)
+                            }
+                        },
+                        enabled = team != null && team.pokemon.isNotEmpty()
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Share team")
+                    }
                     IconButton(onClick = { viewModel.showEditNameDialog() }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit name")
                     }
@@ -546,4 +567,22 @@ private fun getTypeColor(type: String): Color {
         "dragon" -> Color(0xFF7038F8)
         else -> Color(0xFF68A090)
     }
+}
+
+private fun formatTeamForSharing(team: Team): String {
+    val sb = StringBuilder()
+    sb.appendLine("My Pokemon Team: ${team.name}")
+    sb.appendLine()
+
+    team.pokemon.forEachIndexed { index, pokemon ->
+        val types = pokemon.types.joinToString("/") { it.replaceFirstChar { c -> c.uppercase() } }
+        sb.appendLine("${index + 1}. ${pokemon.name.replaceFirstChar { it.uppercase() }} ($types)")
+    }
+
+    if (team.pokemon.size < Team.MAX_SIZE) {
+        sb.appendLine()
+        sb.appendLine("(${team.pokemon.size}/${Team.MAX_SIZE} Pokemon)")
+    }
+
+    return sb.toString().trim()
 }
