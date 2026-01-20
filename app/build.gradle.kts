@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
+    // AdMob
+    implementation(libs.play.services.ads)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

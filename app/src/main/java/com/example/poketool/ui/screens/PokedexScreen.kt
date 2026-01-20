@@ -18,17 +18,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.poketool.data.model.Pokemon
+import com.example.poketool.ui.components.AdBanner
 import com.example.poketool.ui.components.PokemonDetailBottomSheet
 import com.example.poketool.ui.components.PokemonItem
 import com.example.poketool.ui.components.PokemonSearchBar
 import com.example.poketool.ui.viewmodel.PokedexViewModel
 import com.example.poketool.ui.viewmodel.TeamViewModel
 import kotlinx.coroutines.launch
+import kotlin.random.Random
+
+private sealed class PokedexListItem {
+    data class PokemonListItem(val pokemon: Pokemon) : PokedexListItem()
+    data class AdItem(val id: Int) : PokedexListItem()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,18 +84,38 @@ fun PokedexScreen(
                 )
             }
         } else {
+            // Create list with ads inserted at random positions
+            val listWithAds = remember(pokemonList) {
+                insertAdsRandomly(pokemonList)
+            }
+
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(pokemonList, key = { it.id }) { pokemon ->
-                    PokemonItemWithLazyLoad(
-                        pokemon = pokemon,
-                        isLoading = loadingDetails.contains(pokemon.id),
-                        onVisible = { viewModel.fetchDetailsIfNeeded(pokemon) },
-                        onClick = { viewModel.selectPokemon(pokemon) }
-                    )
+                items(
+                    items = listWithAds,
+                    key = { item ->
+                        when (item) {
+                            is PokedexListItem.PokemonListItem -> "pokemon_${item.pokemon.id}"
+                            is PokedexListItem.AdItem -> "ad_${item.id}"
+                        }
+                    }
+                ) { item ->
+                    when (item) {
+                        is PokedexListItem.PokemonListItem -> {
+                            PokemonItemWithLazyLoad(
+                                pokemon = item.pokemon,
+                                isLoading = loadingDetails.contains(item.pokemon.id),
+                                onVisible = { viewModel.fetchDetailsIfNeeded(item.pokemon) },
+                                onClick = { viewModel.selectPokemon(item.pokemon) }
+                            )
+                        }
+                        is PokedexListItem.AdItem -> {
+                            AdBanner()
+                        }
+                    }
                 }
             }
         }
@@ -130,4 +158,28 @@ private fun PokemonItemWithLazyLoad(
         isLoadingDetails = isLoading,
         modifier = Modifier.clickable { onClick() }
     )
+}
+
+/**
+ * Inserts ads at random positions in the Pokemon list.
+ * Ads are inserted approximately every 5-10 Pokemon cards.
+ */
+private fun insertAdsRandomly(pokemonList: List<Pokemon>): List<PokedexListItem> {
+    if (pokemonList.isEmpty()) return emptyList()
+
+    val result = mutableListOf<PokedexListItem>()
+    var adCounter = 0
+    var nextAdPosition = Random.nextInt(5, 11) // First ad after 5-10 items
+
+    pokemonList.forEachIndexed { index, pokemon ->
+        result.add(PokedexListItem.PokemonListItem(pokemon))
+
+        // Insert ad at random intervals (every 5-10 Pokemon)
+        if (index + 1 == nextAdPosition && index < pokemonList.size - 1) {
+            result.add(PokedexListItem.AdItem(adCounter++))
+            nextAdPosition += Random.nextInt(5, 11)
+        }
+    }
+
+    return result
 }
